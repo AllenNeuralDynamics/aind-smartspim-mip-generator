@@ -1,0 +1,18 @@
+#static parameters for MIP images see params
+resolution: # res of level 0 zarr for [DV, AP, ML] in um
+    - 2.0
+    - 1.8
+    - 1.8
+axes: # axes for images with key = zarr dimension value = plane
+    0: horizontal
+    1: coronal
+    2: sagittal 
+color_table: # imaging filters and their RGB dimension
+    Ex_561_Em_593: 0
+    Ex_561_Em_600: 0
+    Ex_488_Em_525: 1
+    Ex_445_Em_469: 2 
+depth: 30 # depth of MIP in um
+step: 100 # distance between each image in um
+start_plane: -1
+
