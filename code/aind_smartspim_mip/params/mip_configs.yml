@@ -4,9 +4,9 @@ resolution: # res of level 0 zarr for [DV, AP, ML] in um
     - 1.8
     - 1.8
 axes: # axes for images with key = zarr dimension value = plane
-    0: horizontal
-    1: coronal
-    2: sagittal 
+    0: "horizontal"
+    1: "coronal"
+    2: "sagittal" 
 color_table: # imaging filters and their RGB dimension
     Ex_561_Em_593: 0
     Ex_561_Em_600: 0
@@ -15,4 +15,6 @@ color_table: # imaging filters and their RGB dimension
 depth: 30 # depth of MIP in um
 step: 100 # distance between each image in um
 start_plane: -1
+input_data: "../data/fused"
+output_folder: "image_MIP_series"
 

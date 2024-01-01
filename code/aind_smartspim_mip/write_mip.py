@@ -32,12 +32,35 @@ def dask_config():
 
     return
 
-def main(dataset_name, input_config):
+def copy_MIP_results(output_folder: str, s3_path: str, results_folder: str):
+    """
+    Copies the smartspim fused results to S3
+
+    Parameters
+    -----------
+    output_folder: str
+        Path where the results are
+
+    s3_path: str
+        Path where the results will be
+        copied in S3
+
+    results_folder: str
+        Results folder where the .txt
+        will be placed
+    """
+    for out in utils.execute_command_helper(f"aws s3 cp --recursive {output_folder} {s3_path}"):
+        logger.info(out)
+
+def main(dataset_name):
 
     # get static variables for mip creation
     mip_configs = params.get_yaml('../code/aind_smartspim_mip/params/mip_configs.yml')
     mip_configs['input_directory'] = dataset_name
-    
+    mip_configs['s3_path'] = 's3://aind-open-data'
+
+    logger.info(f"MIP generator input data: {mip_configs}")
+
     # create results folders
     utils.create_folders(mip_configs['axes'])
 
@@ -73,8 +96,8 @@ def main(dataset_name, input_config):
         for step in tqdm(steps, total = len(steps)):
             mip = np.zeros(
                 (
-                    ch_zarrs[1], 
-                    ch_zarrs[2], 
+                    ch_zarrs[0].shape[1], 
+                    ch_zarrs[0].shape[2], 
                     3)
                 ).astype('uint16')
             
@@ -83,6 +106,9 @@ def main(dataset_name, input_config):
 
             filepath = Path('../results/{plane}_MIP_images').joinpath(f"plane_{plane}_depth_{step}um_mip_{mip_depth}um.tiff")
             imwrite(filepath, mip)
+
+    
+    return Path(f"{mip_configs['s3_path']}/{mip_configs['input_directory']}/{mip_configs['output_folder']}/")
 
 if __name__ == "__main__":
     main()
