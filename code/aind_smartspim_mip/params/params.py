@@ -47,6 +47,7 @@ class MipParams(ArgSchema):
 
     axes = Dict(
         required=True, metadata={"description": "Axes for images with key = zarr dimension value = plane"}
+    )
 
     color_table = Dict(
         required=True, metadata={"description": "Look-up table for filters to RGB channels"}
