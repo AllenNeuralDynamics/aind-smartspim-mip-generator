@@ -5,7 +5,7 @@ import platform
 
 import yaml
 from argschema import ArgSchema
-from argschema.fields import InputDir, InputFile, Str, Int, Dict, List
+from argschema.fields import InputDir, InputFile, Str, Int, Float, Dict, List
 
 from .._shared.types import PathLike
 
@@ -42,30 +42,44 @@ class MipParams(ArgSchema):
     )
 
     resolution = List(
-        required=True, metadata={"description": "The resolution in um for each axis ordered [DV, AP, ML]"}
+        cls_or_instance=Float(),
+        required=True, 
+        metadata={"description": "The resolution in um for each axis ordered [DV, AP, ML]"}
     )
 
     axes = Dict(
-        required=True, metadata={"description": "Axes for images with key = zarr dimension value = plane"}
+        cls_or_instance=Str(),
+        required=True, 
+        metadata={"description": "Axes for images with key = zarr dimension value = plane"}
     )
 
     color_table = Dict(
-        required=True, metadata={"description": "Look-up table for filters to RGB channels"}
+        cls_or_instance=Int(),
+        required=True, 
+        metadata={"description": "Look-up table for filters to RGB channels"}
     )
 
     depth = Int(
-        required=True, metadata={"description": "Depth in um for the MIP"}
+        required=True, 
+        metadata={"description": "Depth in um for the MIP"}
     )
 
     step = Int(
-        required=True, metadata={"description": "Distance in um between images"}
+        required=True, 
+        metadata={"description": "Distance in um between images"}
     )
 
     start_plane = Int(
-        requires=True, metadata={"description": "Plane to start setctioning from"}
+        requires=True, 
+        metadata={"description": "Plane to start setctioning from"}
     )
-    
-    output_path = InputDir(
+
+    input_data = InputDir(
+        required=True,
+        metadata={"description": "Path where MIP images will be stored"},
+    )
+
+    output_path = Str(
         required=True,
         metadata={"description": "Path where MIP images will be stored"},
     )
