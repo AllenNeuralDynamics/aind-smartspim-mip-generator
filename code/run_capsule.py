@@ -105,6 +105,5 @@ def main():
     logger.info(f"Dataset name: {dataset_name}")
     image_path = write_mip.main(dataset_name)
     
-
 if __name__=="__main__":
     main()

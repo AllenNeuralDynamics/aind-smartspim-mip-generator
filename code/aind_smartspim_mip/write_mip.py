@@ -9,7 +9,6 @@ from tqdm import tqdm
 from imageio.v2 import imwrite
 from dask.distributed import Client, LocalCluster
 
-
 from .utils import utils
 from .params import params
 
@@ -50,7 +49,7 @@ def dask_config():
 
     return
 
-def copy_fused_results(output_folder: str, s3_path: str, results_folder: str):
+def copy_mip_results(output_folder: str, s3_path: str, results_folder: str):
     """
     Copies the smartspim fused results to S3
 
@@ -69,6 +68,11 @@ def copy_fused_results(output_folder: str, s3_path: str, results_folder: str):
     """
     for out in utils.execute_command_helper(f"aws s3 cp --recursive {output_folder} {s3_path}"):
         logger.info(out)
+
+    utils.save_string_to_txt(
+        f"Stitched dataset saved in: {s3_path}",
+        f"{results_folder}/output_mip_generation.txt",
+    )
 
 @dask.delayed
 def create_mip(ch_zarrs, step, half_step):
@@ -147,8 +151,12 @@ def main(dataset_name):
         results.compute()
         client.restart()
     
+    s3_path = f"{mip_configs['s3_path']}/{mip_configs['input_directory']}/{mip_configs['output_folder']}"
+    output_folder = "../results/"
 
-    return Path(f"{mip_configs['s3_path']}/{mip_configs['input_directory']}/{mip_configs['output_folder']}/")
+    copy_mip_results(output_folder, s3_path, output_folder)
+
+    return s3_path
 
 if __name__ == "__main__":
     main()
