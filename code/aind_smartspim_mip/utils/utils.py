@@ -4,7 +4,7 @@ import subprocess
 import dask.array as da
 
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import Optional, Union
 
 # IO types
 PathLike = Union[str, Path]
@@ -98,4 +98,25 @@ def execute_command_helper(
     return_code = popen.wait()
     if return_code:
         raise subprocess.CalledProcessError(return_code, command)
+        
+def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
+    """
+    Saves a text in a file in the given mode.
+
+    Parameters
+    ------------------------
+
+    txt: str
+        String to be saved.
+
+    filepath: PathLike
+        Path where the file is located or will be saved.
+
+    mode: str
+        File open mode.
+
+    """
+
+    with open(filepath, mode) as file:
+        file.write(txt + "\n")
 

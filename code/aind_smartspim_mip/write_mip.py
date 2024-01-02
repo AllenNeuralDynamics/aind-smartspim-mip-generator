@@ -145,6 +145,8 @@ def main(dataset_name):
             results.append(fpath)
 
         results.compute()
+        client.restart()
+    
 
     return Path(f"{mip_configs['s3_path']}/{mip_configs['input_directory']}/{mip_configs['output_folder']}/")
 
