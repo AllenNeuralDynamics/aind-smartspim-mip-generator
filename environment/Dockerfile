@@ -9,6 +9,7 @@ COPY git-askpass /
 
 RUN pip install -U --no-cache-dir \
     dask[distributed]==2021.11.1 \
+    argschema==3.0.4 \
     imageio==2.26.0 \
     ipython==8.11.0 \
     matplotlib==3.7.1 \
