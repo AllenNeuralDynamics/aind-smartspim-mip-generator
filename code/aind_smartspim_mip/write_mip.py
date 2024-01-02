@@ -50,6 +50,51 @@ def dask_config():
 
     return
 
+def copy_fused_results(output_folder: str, s3_path: str, results_folder: str):
+    """
+    Copies the smartspim fused results to S3
+
+    Parameters
+    -----------
+    output_folder: str
+        Path where the results are
+
+    s3_path: str
+        Path where the results will be
+        copied in S3
+
+    results_folder: str
+        Results folder where the .txt
+        will be placed
+    """
+    for out in utils.execute_command_helper(f"aws s3 cp --recursive {output_folder} {s3_path}"):
+        logger.info(out)
+
+@dask.delayed
+def create_mip(ch_zarrs, step, half_step):
+
+    mip = np.zeros(
+        (
+            ch_zarrs[0].shape[1], 
+            ch_zarrs[0].shape[2], 
+            3
+        )
+    ).astype('uint16')
+
+    for channel, ch_array in ch_zarrs.items():
+        mip[:, :, channel] = ch_array[(step - half_step):(step + half_step), : , :].max(axis = 0)
+    
+    return mip
+
+@dask.delayed
+def save_mip(mip, plane, step, mip_depth):
+
+    filepath = Path('../results/{plane}_MIP_images').joinpath(f"plane_{plane}_depth_{step}um_mip_{mip_depth}um.tiff")
+    
+    imwrite(filepath, mip)
+
+    return filepath
+
 def main(dataset_name):
 
     # get static variables for mip creation
@@ -92,21 +137,15 @@ def main(dataset_name):
         if (ch_zarrs[0].shape[0] - steps[-1] + 1) < half_step:
             steps = steps[:-1]
 
+        results = []
         for step in tqdm(steps, total = len(steps)):
-            mip = np.zeros(
-                (
-                    ch_zarrs[0].shape[1], 
-                    ch_zarrs[0].shape[2], 
-                    3)
-                ).astype('uint16')
-            
-            for k, ch in ch_zarrs.items():
-                mip[:, :, k] = ch[(step - half_step):(step + half_step), : , :].max(axis = 0)
 
-            filepath = Path('../results/{plane}_MIP_images').joinpath(f"plane_{plane}_depth_{step}um_mip_{mip_depth}um.tiff")
-            imwrite(filepath, mip)
+            mip = create_mip(ch_zarrs, step, half_step)
+            fpath = save_mip(mip, plane, step, mip_depth)
+            results.append(fpath)
 
-    
+        results.compute()
+
     return Path(f"{mip_configs['s3_path']}/{mip_configs['input_directory']}/{mip_configs['output_folder']}/")
 
 if __name__ == "__main__":
