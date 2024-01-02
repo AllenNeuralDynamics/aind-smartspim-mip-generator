@@ -1,12 +1,23 @@
 """ top level run script """
+import logging
 import os
-from pathlib import Path
-from typing import List, Tuple
+import json
 
-from aind_smartspim_fuse import fuse
-from aind_smartspim_fuse.params import get_yaml
-from aind_smartspim_fuse.utils import utils
+from aind_smartspim_mip import write_mip
+from aind_smartspim_mip.utils import utils
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s : %(message)s",
+    datefmt="%Y-%m-%d %H:%M",
+    handlers=[
+        logging.StreamHandler(),
+        # logging.FileHandler("test.log", "a"),
+    ],
+)
+logging.disable("DEBUG")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def get_data_config(
     data_folder: str,

@@ -1,12 +1,30 @@
 import logging
-import os
-from datetime import datetime
+import dask
 from pathlib import Path
-from typing import Optional
 
-from ._shared.types import PathLike
+import numpy as np
+import dask.array as da
+
+from tqdm import tqdm
+from imageio.v2 import imwrite
+from dask.distributed import Client, LocalCluster
+
+
 from .utils import utils
 from .params import params
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s : %(message)s",
+    datefmt="%Y-%m-%d %H:%M",
+    handlers=[
+        logging.StreamHandler(),
+        # logging.FileHandler("test.log", "a"),
+    ],
+)
+logging.disable("DEBUG")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def dask_config():
     dask_folder = Path("/root/capsule/scratch")
@@ -32,26 +50,6 @@ def dask_config():
 
     return
 
-def copy_MIP_results(output_folder: str, s3_path: str, results_folder: str):
-    """
-    Copies the smartspim fused results to S3
-
-    Parameters
-    -----------
-    output_folder: str
-        Path where the results are
-
-    s3_path: str
-        Path where the results will be
-        copied in S3
-
-    results_folder: str
-        Results folder where the .txt
-        will be placed
-    """
-    for out in utils.execute_command_helper(f"aws s3 cp --recursive {output_folder} {s3_path}"):
-        logger.info(out)
-
 def main(dataset_name):
 
     # get static variables for mip creation
@@ -69,9 +67,10 @@ def main(dataset_name):
 
     # initialize dask cluster
     dask_config()
+    dask_workers = 8
     cluster = LocalCluster(
-        n_workers=n_workers,
-        threads_per_worker=threads_per_worker,
+        n_workers=dask_workers,
+        threads_per_worker=1,
         processes=True,
         memory_limit="auto",
         dashboard_address=None,
@@ -87,7 +86,7 @@ def main(dataset_name):
         if mip_configs['start_plane'] == -1:
             start_plane = half_step = np.ceil(n_planes / 2).astype(int)
 
-        ch_zarrs = {k:da.moveaxis(v, axis, 0), for k, v in ch_zarrs if not isinstance(v, type(None))}
+        ch_zarrs = {k:da.moveaxis(v, axis, 0) for k, v in ch_zarrs if not isinstance(v, type(None))}
 
         steps = np.arange(start_plane, ch_zarrs[0].shape[0], mip_configs['step'])
         if (ch_zarrs[0].shape[0] - steps[-1] + 1) < half_step:
@@ -101,7 +100,7 @@ def main(dataset_name):
                     3)
                 ).astype('uint16')
             
-            for k, ch, ch_zarrs.items():
+            for k, ch in ch_zarrs.items():
                 mip[:, :, k] = ch[(step - half_step):(step + half_step), : , :].max(axis = 0)
 
             filepath = Path('../results/{plane}_MIP_images').joinpath(f"plane_{plane}_depth_{step}um_mip_{mip_depth}um.tiff")
