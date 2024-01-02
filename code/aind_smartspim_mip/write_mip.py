@@ -151,12 +151,10 @@ def main(dataset_name):
         results.compute()
         client.restart()
     
-    s3_path = f"{mip_configs['s3_path']}/{mip_configs['input_directory']}/{mip_configs['output_folder']}"
-    output_folder = "../results/"
 
-    copy_mip_results(output_folder, s3_path, output_folder)
+    output_folder = "../results"
 
-    return s3_path
+    return output_folder
 
 if __name__ == "__main__":
     main()
