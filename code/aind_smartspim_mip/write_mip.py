@@ -130,14 +130,15 @@ def main(dataset_name):
 
     # loop over axes and create images
     for axis, plane in mip_configs['axes'].items():
-        n_planes = np.ceil(mip_configs['depth'] / mip_configs['resolution'][int(axis)]).astype(int) 
+        n_planes = np.ceil(mip_configs['depth'] / mip_configs['resolution'][int(axis)]).astype(int)
+        step_um =  np.ceil(mip_configs['step'] / mip_configs['resolution'][int(axis)]).astype(int)
 
         if mip_configs['start_plane'] == -1:
             start_plane = half_step = np.ceil(n_planes / 2).astype(int)
 
         ch_zarrs = {k:da.moveaxis(v, axis, 0) for k, v in ch_zarrs if not isinstance(v, type(None))}
 
-        steps = np.arange(start_plane, ch_zarrs[0].shape[0], mip_configs['step'])
+        steps = np.arange(start_plane, ch_zarrs[0].shape[0], step_um )
         if (ch_zarrs[0].shape[0] - steps[-1] + 1) < half_step:
             steps = steps[:-1]
 
