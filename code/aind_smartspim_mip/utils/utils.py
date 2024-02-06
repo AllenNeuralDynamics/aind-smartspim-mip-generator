@@ -201,12 +201,12 @@ def get_zarrs(input_directory, channels):
     zarrs = defaultdict(dict)
     for ch in channels:
 
-        file = os.path.join(input_directory, ch[1] + '.zarr')
+        file = os.path.join(input_directory, ch[0] + '.zarr')
         ch_array = da.from_zarr(file, 0).squeeze()
         zarrs[zarr_ch]['data'] = ch_array
-        zarrs[zarr_ch]['index'] = ch[0]
+        zarrs[zarr_ch]['index'] = ch[1]
 
-        dims = ch_array
+        dims = ch_array.shape
 
     return zarrs, dims
 

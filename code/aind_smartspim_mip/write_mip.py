@@ -83,8 +83,8 @@ def copy_mip_results(output_folder: str, s3_path: str, results_folder: str):
     )
 
 def main(
-    data_description, 
-    dataset_name
+    pipeline_config, 
+    smartspim_dataset_name
     ):
    
     '''
@@ -104,8 +104,8 @@ def main(
     
     mip_configs = get_yaml_config('/code/aind_smartsmpim_mip/params/mip_configs.yml')
 
-
-    ch_zarrs, dims = get_zarrs(path, channels])
+    channels = get_channels(pipeline_config['channel_translation'])
+    ch_zarrs, dims = utils.get_zarrs(path, channels])
             
     if plane == 'horizontal':
         scale = 2.0
