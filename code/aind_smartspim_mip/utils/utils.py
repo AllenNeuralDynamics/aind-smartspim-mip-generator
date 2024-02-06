@@ -9,14 +9,56 @@ from typing import Optional, Union
 # IO types
 PathLike = Union[str, Path]
 
-def get_zarrs(mip_dict, bucket = 'aind-open-data'):
+def get_zarr_params():
+    zarr_params = {
+        'resolution': 
+            [
+                1.0,
+                1.0,
+                2.0,
+                1.8,
+                1.8,
+            ],
+        'axes_order':
+            [
+                "t",
+                "c",
+                "z",
+                "y",
+                "x",
+            ],
+        'units':
+            [
+                "millisecond",
+                None,
+                "micrometer",
+                "micrometer",
+                "micrometer",
+            ],
+        'types':
+            [
+                "time",
+                "channel",
+                "space",
+                "space",
+                "space",
+            ],
+        'levels': 1
+    }
+    return zarr_params
+
+def get_zarrs(input_directory, channels):
     """
     Get a dictionary with the zarrs for the channels requested
 
     Parameters
     ----------
-    mip_dict: dict
-        Dictionary with parameters related to zarr location
+    input_directory: Pathlike
+        The main diectory on AWS that contains stitched images stored in the data folder
+    
+    channels: list[str]
+        The subfolders within the stitched folder identifying which zarrs
+        to pull
 
     Returns
     ----------
@@ -24,22 +66,13 @@ def get_zarrs(mip_dict, bucket = 'aind-open-data'):
         Dictionary with key = channel value = dask.array
     
     """
-    zarrs = {
-        0: None, 
-        1: None, 
-        2: None
-    }
-
-    for filt, axis in mip_dict['color_table']:
-        try:
-            ch_array = da.from_zarr(
-                f"{mip_dict['input_data']}/{filt}.zarr/0/"
-            ).squeeze()
-        except:
-            continue
         
-        zarrs[axis] = ch_array
-    
+    zarrs = {}
+    for zarr_ch in channels:
+        file = os.path.join(input_directory, zarr_ch + '.zarr')
+        ch_array = da.from_zarr(file, 0).squeeze()
+        zarrs[zarr_ch] = ch_array
+
     return zarrs
 
 def create_folders(axes):

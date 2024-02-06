@@ -99,6 +99,75 @@ def save_mip(mip, plane, step, mip_depth):
 
     return filepath
 
+def create_multi_channel_mip(path, save_path, plane, channels, projection, step_um):
+    '''
+    Creating a multi channel MIP volume from full zarr
+
+    Parameters
+    ----------
+    path : PathLike
+        path to the root folder for zarrs on AWS
+    save_path: PathLike
+        where the zarr will be written
+    plane: str
+        Which plane you want to make a MIP for (i.e coronal, sagittal, horizontal)
+    channels: list[str]
+        list of channels that are to be included in MIP
+    projection : int
+        depth in um that you want for each projection
+    step_um : int
+        distance in microns you would like to have betwqeen each projection
+
+    Returns
+    -------
+    img_MIP: np.array
+        array (tx c x Y x X x Z) where Z is the number of images and YxX is the resolution
+    '''
+    
+    ch_zarrs = get_zarrs(path, channels)
+            
+    if plane == 'horizontal':
+        scale = 2.0
+        dim = ch_zarrs[channels[0]].shape[0]
+    elif plane == 'coronal':
+        scale = 1.8
+        dim = ch_zarrs[channels[0]].shape[1]
+    elif plane == 'sagittal':
+        scale = 1.8
+        dim = ch_zarrs[channels[0]].shape[2]
+        
+    n_planes = np.ceil(projection / scale).astype(int)
+    start_plane = half_step = np.ceil(n_planes / 2).astype(int)
+    
+    steps = np.arange(start_plane, dim, int(step_um / scale))
+    
+    for ch, ch_array in ch_zarrs.items():
+        print(f'Creating MIP for {ch}\n')
+        s = 0
+        
+        if '561' in ch:
+            ch_idx = 0
+        elif '488' in ch:
+            ch_idx = 1
+        
+        for step in tqdm(steps, total = len(steps)):
+            
+            if plane == 'horizontal':
+                mip = ch_array[(step - half_step):(step + half_step), : , :].max(axis = 0)
+            elif plane == 'coronal':
+                mip = ch_array[:, (step - half_step):(step + half_step) , :].max(axis = 1)
+            elif plane == 'sagittal':
+                mip = ch_array[:, :, (step - half_step):(step + half_step)].max(axis = 2)
+            
+            if s == 0:
+                mip_array = np.zeros((1, 3, mip.shape[0], mip.shape[1], len(steps))).astype('uint16')
+            
+            mip_array[0, ch_idx, :, :, s] = mip
+            s += 1
+     
+    with open(os.path.join(save_path, 'mip_rgb.pkl'), 'wb') as f:
+        pickle.dump(mip_array, f)
+
 def main(dataset_name):
 
     # get static variables for mip creation
