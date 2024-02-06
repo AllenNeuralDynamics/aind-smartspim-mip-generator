@@ -1,12 +1,10 @@
 import logging
-import dask
+import yaml
 from pathlib import Path
 
 import numpy as np
-import dask.array as da
 
 from tqdm import tqdm
-from imageio.v2 import imwrite
 from dask.distributed import Client, LocalCluster
 
 from .utils import utils
@@ -25,29 +23,19 @@ logging.disable("DEBUG")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-def dask_config():
-    dask_folder = Path("/root/capsule/scratch")
-    dask.config.set(
-        {
-            "temporary-directory": dask_folder,
-            "local_directory": dask_folder,
-            "tcp-timeout": "300s",
-            "array.chunk-size": "384MiB",
-            "distributed.comm.timeouts": {
-                "connect": "300s",
-                "tcp": "300s",
-            },
-            "distributed.scheduler.bandwidth": 100000000,
-            "distributed.worker.memory.rebalance.measure": "optimistic",
-            "distributed.worker.memory.target": False,  # 0.85,
-            "distributed.worker.memory.spill": 0.92,  # False,#
-            "distributed.worker.memory.pause": 0.95,  # False,#
-            "distributed.worker.memory.terminate": 0.98,  # False, #
+def get_channels(channels):
 
-        }
-    )
+    channel_data = []
 
-    return
+    for key, ch in channels.items():
+        if '488' in ch:
+            channel_data.append([ch, 0])
+        elif '561' in ch:
+            channel_data.append([ch, 1])
+        elif '445' in ch:
+            channel_data.append([ch, 2])
+    
+    return channel_data
 
 def copy_mip_results(output_folder: str, s3_path: str, results_folder: str):
     """
@@ -74,88 +62,88 @@ def copy_mip_results(output_folder: str, s3_path: str, results_folder: str):
         f"{results_folder}/output_mip_generation.txt",
     )
 
-@dask.delayed
-def create_mip(ch_zarrs, step, half_step):
+def main(
+    pipeline_config, 
+    mip_configs,
+    smartspim_dataset_name
+    results_folder
+    ):
+   
+    '''
+    Creating a multi channel MIP volume from full zarr
 
-    mip = np.zeros(
-        (
-            ch_zarrs[0].shape[1], 
-            ch_zarrs[0].shape[2], 
-            3
-        )
-    ).astype('uint16')
-
-    for channel, ch_array in ch_zarrs.items():
-        mip[:, :, channel] = ch_array[(step - half_step):(step + half_step), : , :].max(axis = 0)
+    Parameters
+    ----------
+    data : dict
+        Metadata related to dataset
+    dataset_name: str
+        Labtrack ID
+    Returns
+    -------
+    img_MIP: np.array
+        array (t x c x Y x X x Z) where Z is the number of images and YxX is the resolution
+    '''
     
-    return mip
+    channels = get_channels(pipeline_config['channel_translation'])
 
-@dask.delayed
-def save_mip(mip, plane, step, mip_depth):
+    zarr_path = f'/data/{smartspim_dataset_name}/image_tile_fusing/OMEZarr/'
+    ch_zarrs, dims = utils.get_zarrs(zarr_path, channels])
 
-    filepath = Path('../results/{plane}_MIP_images').joinpath(f"plane_{plane}_depth_{step}um_mip_{mip_depth}um.tiff")
+    if mip_configs['plane']  == 'horizontal':
+        scale = 2.0
+        dim = dims.shape[0]
+    elif mip_configs['plane']  == 'coronal':
+        scale = 1.8
+        dim = dims.shape[1]
+    elif mip_configs['plane'] == 'sagittal':
+        scale = 1.8
+        dim = dims.shape[2]
+        
+    n_planes = np.ceil(mip_configs['depth'] / scale).astype(int)
+    start_plane = half_step = np.ceil(n_planes / 2).astype(int)
     
-    imwrite(filepath, mip)
+    steps = np.arange(start_plane, dim, int(mip_configd['step'] / scale))
+    
+    for ch, ch_data in ch_zarrs.items():
+        print(f'Creating MIP for {plame}\n')
+        s = 0
 
-    return filepath
+        for step in tqdm(steps, total = len(steps)):
+            
+            if plane == 'horizontal':
+                mip = ch_data['data'][(step - half_step):(step + half_step), : , :].max(axis = 0)
+            elif plane == 'coronal':
+                mip = ch_data['data'][:, (step - half_step):(step + half_step) , :].max(axis = 1)
+            elif plane == 'sagittal':
+                mip = ch_data['data'][:, :, (step - half_step):(step + half_step)].max(axis = 2)
+            
+            if s == 0:
+                mip_array = np.zeros((1, 3, mip.shape[0], mip.shape[1], len(steps))).astype('uint16')
+                
+            mip_array[0, ch_data['index'], :, :, s] = mip
+            s += 1
+    
+    save_path = f"{results_folder}/OMEZarr"
 
-def main(dataset_name):
+    if not os.exists(save_path):
+        os.mkdir(save_path) 
 
-    # get static variables for mip creation
-    mip_configs = params.get_yaml('../code/aind_smartspim_mip/params/mip_configs.yml')
-    mip_configs['input_directory'] = dataset_name
-    mip_configs['s3_path'] = 's3://aind-open-data'
-
-    logger.info(f"MIP generator input data: {mip_configs}")
-
-    # create results folders
-    utils.create_folders(mip_configs['axes'])
-
-    # get the zarrs into dask arrays
-    ch_zarrs = utils.get_zarrs(mip_configs)
-
-    # initialize dask cluster
-    dask_config()
-    dask_workers = 8
-    cluster = LocalCluster(
-        n_workers=dask_workers,
-        threads_per_worker=1,
-        processes=True,
-        memory_limit="auto",
-        dashboard_address=None,
+    utils.write_zarr(
+        mip_array, 
+        mip_configs['plane'], 
+        mip_configs['chunking'], 
+        save_path
     )
 
-    client = Client(cluster)
-    mip_depth = mip_configs['depth']
+    s3_path = f"s3://{mip_configs['bucket']}/{smartspim_dataset_name}/{mip_configs['s3_dir']/OMEZarr/
 
-    # loop over axes and create images
-    for axis, plane in mip_configs['axes'].items():
-        n_planes = np.ceil(mip_configs['depth'] / mip_configs['resolution'][int(axis)]).astype(int)
-        step_um =  np.ceil(mip_configs['step'] / mip_configs['resolution'][int(axis)]).astype(int)
-
-        if mip_configs['start_plane'] == -1:
-            start_plane = half_step = np.ceil(n_planes / 2).astype(int)
-
-        ch_zarrs = {k:da.moveaxis(v, axis, 0) for k, v in ch_zarrs if not isinstance(v, type(None))}
-
-        steps = np.arange(start_plane, ch_zarrs[0].shape[0], step_um )
-        if (ch_zarrs[0].shape[0] - steps[-1] + 1) < half_step:
-            steps = steps[:-1]
-
-        results = []
-        for step in tqdm(steps, total = len(steps)):
-
-            mip = create_mip(ch_zarrs, step, half_step)
-            fpath = save_mip(mip, plane, step, mip_depth)
-            results.append(fpath)
-
-        results.compute()
-        client.restart()
+    copy_mip_results(
+        save_path,
+        s3_path,
+        results_folder
+    )
     
-
-    output_folder = "../results"
-
-    return output_folder
+    return 
 
 if __name__ == "__main__":
     main()

@@ -19,11 +19,31 @@ logging.disable("DEBUG")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+def get_yaml_config(filename):
+    """
+    Get default configuration from a YAML file.
+
+    Parameters
+    ------------------------
+    filename: str
+        String where the YAML file is located.
+
+    Returns
+    ------------------------
+    Dict
+        Dictionary with the configuration
+    """
+
+    with open(filename, "r") as stream:
+        config = yaml.safe_load(stream)
+
+    return config
+
 def get_data_config(
     data_folder: str,
-    processing_manifest_path: str = "processing_manifest.json",
+    processing_manifest_path: str = "MIP_processing_manifest*",
     data_description_path: str = "data_description.json",
-):
+) -> Tuple:
     """
     Returns the first smartspim dataset found
     in the data folder
@@ -53,12 +73,8 @@ def get_data_config(
     # Doing this because of Code Ocean, ideally we would have
     # a single dataset in the pipeline
 
-    derivatives_dict = utils.read_json_as_dict(
-        f"{data_folder}/{processing_manifest_path}"
-    )
-    data_description_dict = utils.read_json_as_dict(
-        f"{data_folder}/{data_description_path}"
-    )
+    derivatives_dict = utils.read_json_as_dict(glob(f"{data_folder}/{processing_manifest_path}")[0])
+    data_description_dict = utils.read_json_as_dict(f"{data_folder}/{data_description_path}")
 
     smartspim_dataset = data_description_dict["name"]
 
@@ -96,14 +112,24 @@ def main():
     in code ocean
     """
 
-    data_folder = os.path.abspath("../data/")
-    data_description_path = f"{data_folder}/data_description.json"
+    mode = str(sys.argv[1:])
+    mode = mode.replace("[", "").replace("]", "").casefold()
 
-    data_description = read_json_as_dict(data_description_path)
-    dataset_name = data_description["name"]
+    # Absolute paths of common Code Ocean folders
+    data_folder = os.path.abspath("../data")
+    results_folder = os.path.abspath("../results")
 
-    logger.info(f"Dataset name: {dataset_name}")
-    image_path = write_mip.main(dataset_name)
+    pipeline_config, smartspim_dataset_name = get_data_config(data_folder=data_folder)
+    mip_configs = get_yaml_config('/code/aind_smartsmpim_mip/params/mip_configs.yml')
+    mip_configs['plane'] = mode
+    
+    logger.info(f"Dataset name: {smartspim_dataset_name}")
+    image_path = write_mip.main(
+        pipeline_config, 
+        mip_configs,
+        smartspim_dataset_name, 
+        results_folder
+    )
     
 if __name__=="__main__":
     main()
