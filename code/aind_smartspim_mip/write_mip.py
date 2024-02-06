@@ -141,7 +141,16 @@ def main(
             mip_array[0, ch_data['index'], :, :, s] = mip
             s += 1
     
-    return mip_array
+    save_path = 
+
+    write_zarr(
+        mip_array, 
+        smartspim_dataset_name, 
+        mip_configs['chunking'], 
+        save_path
+    )
+
+    return 
 
 if __name__ == "__main__":
     main()
