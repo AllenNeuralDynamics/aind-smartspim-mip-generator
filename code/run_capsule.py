@@ -21,9 +21,9 @@ logger.setLevel(logging.INFO)
 
 def get_data_config(
     data_folder: str,
-    processing_manifest_path: str = "processing_manifest.json",
+    processing_manifest_path: str = "MIP_processing_manifest*",
     data_description_path: str = "data_description.json",
-):
+) -> Tuple:
     """
     Returns the first smartspim dataset found
     in the data folder
@@ -53,12 +53,8 @@ def get_data_config(
     # Doing this because of Code Ocean, ideally we would have
     # a single dataset in the pipeline
 
-    derivatives_dict = utils.read_json_as_dict(
-        f"{data_folder}/{processing_manifest_path}"
-    )
-    data_description_dict = utils.read_json_as_dict(
-        f"{data_folder}/{data_description_path}"
-    )
+    derivatives_dict = utils.read_json_as_dict(glob(f"{data_folder}/{processing_manifest_path}")[0])
+    data_description_dict = utils.read_json_as_dict(f"{data_folder}/{data_description_path}")
 
     smartspim_dataset = data_description_dict["name"]
 
@@ -95,15 +91,15 @@ def main():
     Main function to execute the smartspim MIP generator
     in code ocean
     """
+    # Absolute paths of common Code Ocean folders
+    data_folder = os.path.abspath("../data")
+    results_folder = os.path.abspath("../results")
 
-    data_folder = os.path.abspath("../data/")
-    data_description_path = f"{data_folder}/data_description.json"
+    pipeline_config, smartspim_dataset_name = get_data_config(data_folder=data_folder)
 
-    data_description = read_json_as_dict(data_description_path)
-    dataset_name = data_description["name"]
 
-    logger.info(f"Dataset name: {dataset_name}")
-    image_path = write_mip.main(dataset_name)
+    logger.info(f"Dataset name: {smartspim_dataset_name}")
+    image_path = write_mip.main(pipeline_config, smartspim_dataset_name)
     
 if __name__=="__main__":
     main()

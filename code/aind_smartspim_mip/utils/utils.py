@@ -3,22 +3,153 @@ import os
 import subprocess
 import dask.array as da
 
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional, Union
 
 # IO types
 PathLike = Union[str, Path]
 
-def get_zarr_params():
-    zarr_params = {
-        'resolution': 
-            [
-                1.0,
-                1.0,
-                2.0,
-                1.8,
-                1.8,
+def create_neuroglancer_json(ng_params, save_path):
+    """
+    Write json for the MIP neuroglancer link
+    """
+    
+    fpath = os.path.join(ng_params['directory'], ng_params['filename'])
+    data = da.from_zarr(ng_params['url'], 0).squeeze()
+    pos = [
+        int(data.shape[1]/2),
+        int(data.shape[2]/2),
+        int(data.shape[3]/2),
+        0.5
+        ]
+    
+    json_body = {
+        "ng_link": "https://aind-neuroglancer-sauujisjxq-uw.a.run.app/#!" + fpath,
+        "title": ng_params["name"],
+        "dimensions": {
+            "z": [
+                0.000002,
+                "m"
             ],
+            "y": [
+                0.0000018,
+                "m"
+            ],
+            "x": [
+                0.0000018,
+                "m"
+            ],
+            "t": [
+                0.001,
+                "s"
+            ]
+        },
+        "position": pos,
+        'crossSectionOrientation': [
+            0,
+            0,
+            -0.7071067690849304,
+            0.7071067690849304
+        ],
+        "crossSectionScale": 3.5,
+        "projectionOrientation": [
+            -0.09444133937358856,
+            -0.00713761243969202,
+            -0.7126563191413879,
+            0.6950905323028564
+        ],
+        "projectionScale": 8192,
+        "layers": [
+            {
+                "type": "image",
+                "source": {
+                    "url": 'zarr://' + ng_params['url'],
+                    "transform": {
+                        "outputDimensions": {
+                            "t": [
+                                0.001,
+                                "s"
+                            ],
+                            "c^": [
+                                1,
+                                ""
+                            ],
+                            "z": [
+                                0.000002,
+                                "m"
+                            ],
+                            "y": [
+                                0.0000018,
+                                "m"
+                            ],
+                            "x": [
+                                0.0000018,
+                                "m"
+                            ]
+                        }    
+                    }
+                },
+                "tab": "source",
+                "shader": ng_params['shader'],
+                "shaderControls": {
+                    "red_channel": 500,
+                    "green_channel": 500,
+                    "blue_channel": 500
+                },
+                "crossSectionRenderScale": 0.08,
+                "channelDimensions": {
+                    "c^": [
+                        1,
+                        ""
+                    ]
+                },
+                "name": ng_params["name"],        
+            }
+        ],
+        "selectedLayer": {
+            "size": 350,
+            "visible": True,
+            "layer": ng_params["name"]
+        },
+        "layout": "xy"
+    }
+    
+    with open(os.path.join(save_path, ng_params['filename']), 'w') as fp:
+        json.dump(json_body, fp, indent=2)
+    
+    return
+
+
+def get_zarr_params(plane):
+    
+    if plane == 'coronal':
+        res = [
+            1.0,
+            1.0,
+            2.0,
+            1.8,
+            1.0,
+        ]
+    elif plane == 'sagittal':
+        res = [
+            1.0,
+            1.0,
+            2.0,
+            1.8,
+            1.0,
+        ]
+    elif plane == 'horizontal':
+        res = [
+            1.0,
+            1.0,
+            1.8,
+            1.8,
+            1.0,
+        ]
+    
+    zarr_params = {
+        'resolution': res,
         'axes_order':
             [
                 "t",
@@ -67,13 +198,17 @@ def get_zarrs(input_directory, channels):
     
     """
         
-    zarrs = {}
-    for zarr_ch in channels:
-        file = os.path.join(input_directory, zarr_ch + '.zarr')
-        ch_array = da.from_zarr(file, 0).squeeze()
-        zarrs[zarr_ch] = ch_array
+    zarrs = defaultdict(dict)
+    for ch in channels:
 
-    return zarrs
+        file = os.path.join(input_directory, ch[1] + '.zarr')
+        ch_array = da.from_zarr(file, 0).squeeze()
+        zarrs[zarr_ch]['data'] = ch_array
+        zarrs[zarr_ch]['index'] = ch[0]
+
+        dims = ch_array
+
+    return zarrs, dims
 
 def create_folders(axes):
     """
@@ -90,7 +225,58 @@ def create_folders(axes):
 
     """
     for k, axis in axes.items():
-        os.mkdir(f"../results/{axis}_MIP_images")
+        os.mkdir(f"../results/OMEZarr/{axis}_MIP_zarr")
+
+    return
+
+def write_zarr(img, lt_id, axis, chunking, save_path):
+    '''
+    Write OME-Zarr object from array
+
+    Parameters
+    ----------
+    img : ArrayLike
+        The array to be converted into zarr format. needs minimum 3 dimensions
+    lt_id : TYPE
+        the labtracks ID for the dataset or other identifier
+    axis : str
+        The axis of the given image
+    chunking : list
+        The current chunk size of each dimension 
+    save_path : PathLike
+        the directory where you want to save the file
+
+    Returns
+    -------
+    None.
+
+    '''
+    
+    params = get_zarr_params()
+    
+    
+    if len(chunking) == 3:
+        chunking = (1, 1, chunking[0], chunking[1], chunking[2])
+    
+    fname = os.path.join(save_path, f"{axis}_MIP.zarr")
+
+    store = parse_url(fname, mode="w").store
+    group = zarr.group(store=store)
+    
+    # The only dimensions you want to down sample are the X and Y.
+    mip = multiscale(img, windowed_mean, (1, 1, 2, 2, 2))
+    mip = [np.asarray(mip[i]) for i in range(params['levels'])]
+
+    resolution, units, types = ngc.get_base_params(params['resolution'], params['axes_order'])
+    axes, trafos = ngc.get_axes_and_transforms(mip, params['axes_order'], units, resolution, types)
+
+    write_multiscale(
+        pyramid = mip,
+        group = group,
+        axes = axes,
+        coordinate_transformations = trafos,
+        storage_options = dict(chunks=chunking)
+    )
 
     return
 
