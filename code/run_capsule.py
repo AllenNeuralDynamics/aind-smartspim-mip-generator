@@ -19,6 +19,26 @@ logging.disable("DEBUG")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+def get_yaml_config(filename):
+    """
+    Get default configuration from a YAML file.
+
+    Parameters
+    ------------------------
+    filename: str
+        String where the YAML file is located.
+
+    Returns
+    ------------------------
+    Dict
+        Dictionary with the configuration
+    """
+
+    with open(filename, "r") as stream:
+        config = yaml.safe_load(stream)
+
+    return config
+
 def get_data_config(
     data_folder: str,
     processing_manifest_path: str = "MIP_processing_manifest*",
@@ -91,15 +111,25 @@ def main():
     Main function to execute the smartspim MIP generator
     in code ocean
     """
+
+    mode = str(sys.argv[1:])
+    mode = mode.replace("[", "").replace("]", "").casefold()
+
     # Absolute paths of common Code Ocean folders
     data_folder = os.path.abspath("../data")
     results_folder = os.path.abspath("../results")
 
     pipeline_config, smartspim_dataset_name = get_data_config(data_folder=data_folder)
-
-
+    mip_configs = get_yaml_config('/code/aind_smartsmpim_mip/params/mip_configs.yml')
+    mip_configs['plane'] = mode
+    
     logger.info(f"Dataset name: {smartspim_dataset_name}")
-    image_path = write_mip.main(pipeline_config, smartspim_dataset_name)
+    image_path = write_mip.main(
+        pipeline_config, 
+        mip_configs,
+        smartspim_dataset_name, 
+        results_folder
+    )
     
 if __name__=="__main__":
     main()

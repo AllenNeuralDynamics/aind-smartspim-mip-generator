@@ -229,7 +229,7 @@ def create_folders(axes):
 
     return
 
-def write_zarr(img, lt_id, axis, chunking, save_path):
+def write_zarr(img, axis, chunking, save_path):
     '''
     Write OME-Zarr object from array
 
@@ -237,8 +237,6 @@ def write_zarr(img, lt_id, axis, chunking, save_path):
     ----------
     img : ArrayLike
         The array to be converted into zarr format. needs minimum 3 dimensions
-    lt_id : TYPE
-        the labtracks ID for the dataset or other identifier
     axis : str
         The axis of the given image
     chunking : list

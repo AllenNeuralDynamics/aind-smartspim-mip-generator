@@ -13,5 +13,7 @@ chunking:
     - 1024
 depth: 30 # depth of MIP in um
 step: 100 # distance between each image in um
+s3_dir: 'image_mip_generation'
+bucket: 'aind-open-data'
 shader: "#uicontrol float red_channel slider(min=0, max=2000, step=1)\n#uicontrol float green_channel slider(min=0, max=2000, step=1)\n#uicontrol float blue_channel slider(min=0, max=2000, step=1)\nvoid main() {\n  float r;\n  float g;\n  float b;\n  float a;\n  \n  if(red_channel<1.0) r = 0.0;\n  else r = float(getDataValue(0).value) / red_channel;\n  if(r > 1.0) r = 1.0;\n  \n  if(green_channel<1.0) g = 0.0;\n  else g = float(getDataValue(1).value) /  green_channel;\n  if(g > 1.0) g = 1.0;\n  \n  if(blue_channel<1.0) b = 0.0;\n   else b = float(getDataValue(2).value) / blue_channel;\n  if(b > 1.0) b = 1.0;\n \n  emitRGB(vec3(r,g,b));\n}"
 

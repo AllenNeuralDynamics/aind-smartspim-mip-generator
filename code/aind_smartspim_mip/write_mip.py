@@ -37,26 +37,6 @@ def get_channels(channels):
     
     return channel_data
 
-def get_yaml_config(filename):
-    """
-    Get default configuration from a YAML file.
-
-    Parameters
-    ------------------------
-    filename: str
-        String where the YAML file is located.
-
-    Returns
-    ------------------------
-    Dict
-        Dictionary with the configuration
-    """
-
-    with open(filename, "r") as stream:
-        config = yaml.safe_load(stream)
-
-    return config
-
 def copy_mip_results(output_folder: str, s3_path: str, results_folder: str):
     """
     Copies the smartspim fused results to S3
@@ -84,7 +64,9 @@ def copy_mip_results(output_folder: str, s3_path: str, results_folder: str):
 
 def main(
     pipeline_config, 
+    mip_configs,
     smartspim_dataset_name
+    results_folder
     ):
    
     '''
@@ -102,18 +84,18 @@ def main(
         array (t x c x Y x X x Z) where Z is the number of images and YxX is the resolution
     '''
     
-    mip_configs = get_yaml_config('/code/aind_smartsmpim_mip/params/mip_configs.yml')
-
     channels = get_channels(pipeline_config['channel_translation'])
-    ch_zarrs, dims = utils.get_zarrs(path, channels])
-            
-    if plane == 'horizontal':
+
+    zarr_path = f'/data/{smartspim_dataset_name}/image_tile_fusing/OMEZarr/'
+    ch_zarrs, dims = utils.get_zarrs(zarr_path, channels])
+
+    if mip_configs['plane']  == 'horizontal':
         scale = 2.0
         dim = dims.shape[0]
-    elif plane == 'coronal':
+    elif mip_configs['plane']  == 'coronal':
         scale = 1.8
         dim = dims.shape[1]
-    elif plane == 'sagittal':
+    elif mip_configs['plane'] == 'sagittal':
         scale = 1.8
         dim = dims.shape[2]
         
@@ -141,15 +123,26 @@ def main(
             mip_array[0, ch_data['index'], :, :, s] = mip
             s += 1
     
-    save_path = 
+    save_path = f"{results_folder}/OMEZarr"
 
-    write_zarr(
+    if not os.exists(save_path):
+        os.mkdir(save_path) 
+
+    utils.write_zarr(
         mip_array, 
-        smartspim_dataset_name, 
+        mip_configs['plane'], 
         mip_configs['chunking'], 
         save_path
     )
 
+    s3_path = f"s3://{mip_configs['bucket']}/{smartspim_dataset_name}/{mip_configs['s3_dir']/OMEZarr/
+
+    copy_mip_results(
+        save_path,
+        s3_path,
+        results_folder
+    )
+    
     return 
 
 if __name__ == "__main__":
