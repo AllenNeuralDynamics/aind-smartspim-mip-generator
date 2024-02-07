@@ -1,11 +1,12 @@
 """
 Module to declare the parameters for the stitching package
 """
+
 import platform
 
 import yaml
 from argschema import ArgSchema
-from argschema.fields import InputDir, InputFile, Str, Int, Float, Dict, List
+from argschema.fields import Dict, Float, InputDir, InputFile, Int, List, Str
 
 from .._shared.types import PathLike
 
@@ -43,35 +44,32 @@ class MipParams(ArgSchema):
 
     resolution = List(
         cls_or_instance=Float(),
-        required=True, 
-        metadata={"description": "The resolution in um for each axis ordered [DV, AP, ML]"}
+        required=True,
+        metadata={
+            "description": "The resolution in um for each axis ordered [DV, AP, ML]"
+        },
     )
 
     axes = Dict(
         cls_or_instance=Str(),
-        required=True, 
-        metadata={"description": "Axes for images with key = zarr dimension value = plane"}
+        required=True,
+        metadata={
+            "description": "Axes for images with key = zarr dimension value = plane"
+        },
     )
 
     color_table = Dict(
         cls_or_instance=Int(),
-        required=True, 
-        metadata={"description": "Look-up table for filters to RGB channels"}
+        required=True,
+        metadata={"description": "Look-up table for filters to RGB channels"},
     )
 
-    depth = Int(
-        required=True, 
-        metadata={"description": "Depth in um for the MIP"}
-    )
+    depth = Int(required=True, metadata={"description": "Depth in um for the MIP"})
 
-    step = Int(
-        required=True, 
-        metadata={"description": "Distance in um between images"}
-    )
+    step = Int(required=True, metadata={"description": "Distance in um between images"})
 
     start_plane = Int(
-        requires=True, 
-        metadata={"description": "Plane to start setctioning from"}
+        requires=True, metadata={"description": "Plane to start setctioning from"}
     )
 
     input_data = InputDir(
@@ -83,7 +81,6 @@ class MipParams(ArgSchema):
         required=True,
         metadata={"description": "Path where MIP images will be stored"},
     )
-
 
 
 def get_yaml(yaml_path: PathLike):

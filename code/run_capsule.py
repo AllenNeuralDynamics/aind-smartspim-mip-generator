@@ -1,7 +1,8 @@
 """ top level run script """
+
+import json
 import logging
 import os
-import json
 
 from aind_smartspim_mip import write_mip
 from aind_smartspim_mip.utils import utils
@@ -18,6 +19,7 @@ logging.basicConfig(
 logging.disable("DEBUG")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 def get_yaml_config(filename):
     """
@@ -38,6 +40,7 @@ def get_yaml_config(filename):
         config = yaml.safe_load(stream)
 
     return config
+
 
 def get_data_config(
     data_folder: str,
@@ -73,12 +76,17 @@ def get_data_config(
     # Doing this because of Code Ocean, ideally we would have
     # a single dataset in the pipeline
 
-    derivatives_dict = utils.read_json_as_dict(glob(f"{data_folder}/{processing_manifest_path}")[0])
-    data_description_dict = utils.read_json_as_dict(f"{data_folder}/{data_description_path}")
+    derivatives_dict = utils.read_json_as_dict(
+        glob(f"{data_folder}/{processing_manifest_path}")[0]
+    )
+    data_description_dict = utils.read_json_as_dict(
+        f"{data_folder}/{data_description_path}"
+    )
 
     smartspim_dataset = data_description_dict["name"]
 
     return derivatives_dict, smartspim_dataset
+
 
 def read_json_as_dict(filepath: str):
     """
@@ -106,6 +114,7 @@ def read_json_as_dict(filepath: str):
 
     return dictionary
 
+
 def main():
     """
     Main function to execute the smartspim MIP generator
@@ -120,16 +129,14 @@ def main():
     results_folder = os.path.abspath("../results")
 
     pipeline_config, smartspim_dataset_name = get_data_config(data_folder=data_folder)
-    mip_configs = get_yaml_config('/code/aind_smartsmpim_mip/params/mip_configs.yml')
-    mip_configs['plane'] = mode
-    
+    mip_configs = get_yaml_config("/code/aind_smartsmpim_mip/params/mip_configs.yml")
+    mip_configs["plane"] = mode
+
     logger.info(f"Dataset name: {smartspim_dataset_name}")
     image_path = write_mip.main(
-        pipeline_config, 
-        mip_configs,
-        smartspim_dataset_name, 
-        results_folder
+        pipeline_config, mip_configs, smartspim_dataset_name, results_folder
     )
-    
-if __name__=="__main__":
+
+
+if __name__ == "__main__":
     main()
