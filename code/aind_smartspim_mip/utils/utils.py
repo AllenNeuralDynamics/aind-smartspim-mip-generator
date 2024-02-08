@@ -178,7 +178,7 @@ def create_folders(axes):
 
     """
     for k, axis in axes.items():
-        os.mkdir(f"../results/OMEZarr/{axis}_MIP_zarr")
+        os.mkdir(f"../results/OMEZarr/{axis}_MIP.zarr")
 
     return
 

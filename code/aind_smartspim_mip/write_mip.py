@@ -101,7 +101,7 @@ def main(pipeline_config, mip_configs, smartspim_dataset_name, results_folder):
     n_planes = np.ceil(mip_configs["depth"] / scale).astype(int)
     start_plane = half_step = np.ceil(n_planes / 2).astype(int)
 
-    steps = np.arange(start_plane, dim, int(mip_configd["step"] / scale))
+    steps = np.arange(start_plane, dim, int(mip_configs["step"] / scale))
 
     for ch, ch_data in ch_zarrs.items():
         print(f"Creating MIP for {plame}\n")
@@ -130,18 +130,33 @@ def main(pipeline_config, mip_configs, smartspim_dataset_name, results_folder):
             mip_array[0, ch_data["index"], :, :, s] = mip
             s += 1
 
-    save_path = f"{results_folder}/OMEZarr"
+    zarr_path = f"{results_folder}/OMEZarr"
 
-    if not os.exists(save_path):
-        os.mkdir(save_path)
+    if not os.exists(zarr_path):
+        os.mkdir(zarr_path)
 
     utils.write_zarr(
-        mip_array, mip_configs["plane"], mip_configs["chunking"], save_path
+        mip_array, mip_configs["plane"], mip_configs["chunking"], zarr_path
     )
 
-    s3_path = f"s3://{mip_configs['bucket']}/{smartspim_dataset_name}/{mip_configs['s3_dir']}/OMEZarr/"
+    s3_path = f"s3://{mip_configs['bucket']}/{smartspim_dataset_name}/{mip_configs['s3_dir']}"
+    lt_id = smartspim_dataset_name.split('_')[1]
+    
+    ng_params = {
+        's3_dir': f"s3://{mip_configs['bucket']}/{smartspim_dataset_name}/{mip_configs['s3_dir']}",
+        'filename': f"{mip_configs['plane']}_mip_link.json",
+        'url': f"{s3_path}/OMEZarr/{mip_configs['plane']}_MIP.zarr",
+        'name': f"{mip_configs['plane']} MIP: {lt_id}",
+        'shader': mip_configs['shader'],
+    }
 
-    copy_mip_results(save_path, s3_path, results_folder)
+    create_neuroglancer_json(ng_params, results_folder)
+
+    copy_mip_results(
+        results_folder, 
+        f"s3://{mip_configs['bucket']}/{smartspim_dataset_name}/{mip_configs['s3_dir']}/", 
+        results_folder
+    )
 
 
 if __name__ == "__main__":
