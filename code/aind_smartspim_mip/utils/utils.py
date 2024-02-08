@@ -276,6 +276,31 @@ def execute_command_helper(
     if return_code:
         raise subprocess.CalledProcessError(return_code, command)
 
+def read_json_as_dict(filepath: str) -> dict:
+    """
+    Reads a json as dictionary.
+
+    Parameters
+    ------------------------
+
+    filepath: PathLike
+        Path where the json is located.
+
+    Returns
+    ------------------------
+
+    dict:
+        Dictionary with the data the json has.
+
+    """
+
+    dictionary = {}
+
+    if os.path.exists(filepath):
+        with open(filepath) as json_file:
+            dictionary = json.load(json_file)
+
+    return dictionary
 
 def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
     """
