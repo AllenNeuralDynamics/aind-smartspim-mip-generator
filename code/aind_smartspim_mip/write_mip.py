@@ -104,7 +104,7 @@ def main(pipeline_config, mip_configs, smartspim_dataset_name, results_folder):
     steps = np.arange(start_plane, dim, int(mip_configs["step"] / scale))
 
     for ch, ch_data in ch_zarrs.items():
-        print(f"Creating MIP for {plame}\n")
+        print(f"Creating MIP for {plane}\n")
         s = 0
 
         for step in tqdm(steps, total=len(steps)):
@@ -124,8 +124,8 @@ def main(pipeline_config, mip_configs, smartspim_dataset_name, results_folder):
 
             if s == 0:
                 mip_array = np.zeros(
-                    (1, 3, mip.shape[0], mip.shape[1], len(steps))
-                ).astype("uint16")
+                    (1, 3, mip.shape[0], mip.shape[1], len(steps)),
+                dtype = "uint16")
 
             mip_array[0, ch_data["index"], :, :, s] = mip
             s += 1
