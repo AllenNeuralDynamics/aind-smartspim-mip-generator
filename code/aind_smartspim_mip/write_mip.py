@@ -148,6 +148,7 @@ def main(pipeline_config, mip_configs, smartspim_dataset_name, results_folder):
         'url': f"{s3_path}/OMEZarr/{mip_configs['plane']}_MIP.zarr",
         'name': f"{mip_configs['plane']} MIP: {lt_id}",
         'shader': mip_configs['shader'],
+        'psoition': [int(mip_array.shape[2] / 2), int(mip_array.shape[3] / 2), int(mip_array.shape[4] / 2), 0.5]
     }
 
     create_neuroglancer_json(ng_params, results_folder)
