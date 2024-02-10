@@ -9,6 +9,8 @@ COPY git-askpass /
 
 RUN pip install -U --no-cache-dir \
     dask[distributed]==2021.11.1 \
+    ome_zarr==0.8.3 \
+    xarray-multiscale==2.1.0 \
     argschema==3.0.4 \
     imageio==2.26.0 \
     ipython==8.11.0 \
