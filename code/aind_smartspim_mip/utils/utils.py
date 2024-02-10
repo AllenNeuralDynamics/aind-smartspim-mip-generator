@@ -13,11 +13,22 @@ PathLike = Union[str, Path]
 def create_neuroglancer_json(ng_params, save_path):
     """
     Write json for the MIP neuroglancer link
+
+    Parameters
+    ----------
+    ng_params = dict
+        dictionary with the necessary parameters to build the MIP json
+
+    save_path = str
+        where to save the json        
+
+    Results
+    --------
+    None.
+
     """
 
     fpath = os.path.join(ng_params["directory"], ng_params["filename"])
-    data = da.from_zarr(ng_params["url"], 0).squeeze()
-    pos = [int(data.shape[1] / 2), int(data.shape[2] / 2), int(data.shape[3] / 2), 0.5]
 
     json_body = {
         "ng_link": "https://aind-neuroglancer-sauujisjxq-uw.a.run.app/#!" + fpath,
@@ -76,6 +87,20 @@ def create_neuroglancer_json(ng_params, save_path):
 
 
 def get_zarr_params(plane):
+    '''
+    Get Parameters for crating a multi-scale zarr
+
+    Parameters
+    ----------
+    plane: str
+        The plane for each slice of the MIP
+
+    Returns
+    -------
+    zarr_params: dict
+        Dictonary with the resolution, axis order, units, and
+        types for the zarr
+    '''
 
     if plane == "coronal":
         res = [
