@@ -212,6 +212,51 @@ def create_folders(axes):
 
     return
 
+def get_base_params(res, axes_order):
+    
+    resolutions = {k:v for (k, v) in zip(axes_order, res)}
+    units = {
+        "t": "millisecond", 
+        "c": None, 
+        "z": "micrometer", 
+        "y": "micrometer",
+        "x": "micrometer"
+    }
+    types = {
+        "t": "time", 
+        "c": "channel", 
+        "z": "space", 
+        "y": "space",
+        "x": "space"
+    }
+    
+    return resolutions, units, types
+
+def get_axes_and_transforms(mip, axes, units, resolutions, types):
+
+    axes_list = []
+    for ax in axes:
+        axis = {
+            "name": ax,
+            "type": types[ax],
+            }
+        
+        if not isinstance(units[ax], type(None)):
+            axis["unit"] = units[ax]
+
+        axes_list.append(axis)
+
+    transforms = []
+    for scale_level in range(len(mip)):
+        trafo = [
+            {
+                "scale": [resolutions[ax] * 2**scale_level if ax in "zyx" else resolutions[ax] for ax in axes],
+                "type": "scale"
+            }
+        ]
+        transforms.append(trafo)
+    
+    return axes_list, transforms
 
 def write_zarr(img, axis, chunking, save_path):
     """
@@ -248,10 +293,10 @@ def write_zarr(img, axis, chunking, save_path):
     mip = multiscale(img, windowed_mean, (1, 1, 2, 2, 2))
     mip = [np.asarray(mip[i]) for i in range(params["levels"])]
 
-    resolution, units, types = ngc.get_base_params(
+    resolution, units, types = get_base_params(
         params["resolution"], params["axes_order"]
     )
-    axes, trafos = ngc.get_axes_and_transforms(
+    axes, trafos = get_axes_and_transforms(
         mip, params["axes_order"], units, resolution, types
     )
 
