@@ -281,7 +281,7 @@ def write_zarr(img, axis, chunking, save_path):
     params = get_zarr_params(axis)
 
     if len(chunking) == 3:
-        chunking = (1, 1, chunking[0], chunking[1], chunking[2])
+        chunking = (1, 3, chunking[0], chunking[1], chunking[2])
 
     fname = os.path.join(save_path, f"{axis}_MIP.zarr")
 
