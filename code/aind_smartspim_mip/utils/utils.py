@@ -14,7 +14,6 @@ from xarray_multiscale import multiscale, windowed_mean
 # IO types
 PathLike = Union[str, Path]
 
-
 def create_neuroglancer_json(ng_params, save_path):
     """
     Write json for the MIP neuroglancer link
@@ -72,8 +71,8 @@ def create_neuroglancer_json(ng_params, save_path):
                 "tab": "source",
                 "shader": ng_params["shader"],
                 "shaderControls": {
-                    "red_channel": 500,
-                    "green_channel": 500,
+                    "red_channel": ng_params['colors']['red'],
+                    "green_channel": ng_params['colors']['green'],
                     "blue_channel": 500,
                 },
                 "crossSectionRenderScale": 0.08,
@@ -310,6 +309,30 @@ def write_zarr(img, axis, chunking, save_path):
 
     return
 
+def get_color_info(mip_array):
+
+    color_dict = {}
+    for c, ch in enumerate(['red', 'green']):
+        ch_array = mip_array[:, c, :, :, :].squeeze()
+        print(f"ch array data type: {ch_array.dtype} and shape: {ch_array.shape}")
+        hist = np.histogram(ch_array, bins = 65535, range=(0, 65535))
+        minimas = argrelextrema(hist[0], np.less, order = 25)[0]
+
+        if len(minimas) > 0:
+            if minimas[0] == 1:
+                thresh = minimas[1]
+            else:
+                thresh = minimas[0]
+        else:
+            thresh = 50
+
+        thresh_vals = ch_array[ch_array > thresh]
+        print(f"thresh_vals data type: {thresh_vals.dtype} and shape: {thresh_vals.shape}")
+        ng_thresh = np.quantile(thresh_vals, .995, method='median_unbiased')
+        
+        color_dict[ch] = int(ng_thresh)
+    
+    return color_dict
 
 def execute_command_helper(
     command: str,

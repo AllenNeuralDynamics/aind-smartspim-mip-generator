@@ -141,6 +141,8 @@ def main(pipeline_config, mip_configs, smartspim_dataset_name, results_folder):
 
     s3_path = f"s3://{mip_configs['bucket']}/{smartspim_dataset_name}/{mip_configs['s3_dir']}"
     lt_id = smartspim_dataset_name.split('_')[1]
+    color_params = utils.get_color_info(mip_array)
+
     
     ng_params = {
         's3_dir': f"s3://{mip_configs['bucket']}/{smartspim_dataset_name}/{mip_configs['s3_dir']}",
@@ -148,6 +150,7 @@ def main(pipeline_config, mip_configs, smartspim_dataset_name, results_folder):
         'url': f"{s3_path}/OMEZarr/{mip_configs['plane']}_MIP.zarr",
         'name': f"{mip_configs['plane']} MIP: {lt_id}",
         'shader': mip_configs['shader'],
+        'colors': color_params,
         'psoition': [int(mip_array.shape[2] / 2), int(mip_array.shape[3] / 2), int(mip_array.shape[4] / 2), 0.5]
     }
 
