@@ -119,6 +119,13 @@ def main():
     mode = str(sys.argv[1:])
     mode = mode.replace("[", "").replace("]", "").casefold()
 
+    if "zero" in mode:
+        mode = 0
+    elif "one" in mode:
+        mode = 1
+    elif "two" in mode:
+        mode = 2
+
     # Absolute paths of common Code Ocean folders
     data_folder = os.path.abspath("../data")
     results_folder = os.path.abspath("../results")
